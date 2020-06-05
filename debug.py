@@ -5,7 +5,7 @@ from PIL.ImageQt import ImageQt
 from Qt import QtWidgets, QtGui
 from anytree.exporter import DotExporter
 
-from src.node import BaseNode
+from src.base_node import BaseNode
 from src.window import TreeEditWindow
 
 from IPython import embed
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     window = TreeEditWindow(root)
     output = OutputLabel(root)
-    window.set_update_func(output.set_image)
+    window.set_connected_func(output.set_image)
 
     window.show()
     output.show()
