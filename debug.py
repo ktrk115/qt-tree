@@ -57,13 +57,14 @@ class MyNode(NodeMixin):
 
 
 class MyLabel(QtWidgets.QLabel):
-    def __init__(self, root):
+    def __init__(self, scene):
         super().__init__()
-        self.root = root
+        self.scene = scene
         self.set_image()
 
     def set_image(self, *args):
-        img = self.root.get_tree_image().convert('RGBA')
+        root = self.scene.root
+        img = root.get_tree_image().convert('RGBA')
         self.setPixmap(QtGui.QPixmap.fromImage(ImageQt(img)))
         self.setFixedSize(*img.size)
 
@@ -74,7 +75,8 @@ class MyWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("Debug")
 
         view = NodeView(root)
-        label = MyLabel(root)
+        label = MyLabel(view.scene())
+        view.signal_RootUpdated.connect(label.set_image)
         view.signal_Connected.connect(label.set_image)
         view.signal_Disconnected.connect(label.set_image)
 

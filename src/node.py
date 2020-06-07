@@ -138,22 +138,24 @@ class NodeItem(QtWidgets.QGraphicsItem):
                                 self.radius,
                                 self.radius)
 
-        # Node label.
-        painter.setPen(self._textPen)
-        painter.setFont(self._nodeTextFont)
+        # Root label
+        if self.scene().root == self.data:
+            label = 'Root'
+            painter.setPen(self._textPen)
+            painter.setFont(self._nodeTextFont)
 
-        metrics = QtGui.QFontMetrics(painter.font())
-        text_width = metrics.boundingRect(self.name).width() + 14
-        text_height = metrics.boundingRect(self.name).height() + 14
-        margin = (text_width - self.baseWidth) * 0.5
-        textRect = QtCore.QRect(-margin,
-                                -text_height,
-                                text_width,
-                                text_height)
+            metrics = QtGui.QFontMetrics(painter.font())
+            text_width = metrics.boundingRect(label).width() + 14
+            text_height = metrics.boundingRect(label).height() + 14
+            margin = (text_width - self.baseWidth) * 0.5
+            textRect = QtCore.QRect(-margin,
+                                    -text_height,
+                                    text_width,
+                                    text_height)
 
-        painter.drawText(textRect,
-                         QtCore.Qt.AlignCenter,
-                         self.name)
+            painter.drawText(textRect,
+                             QtCore.Qt.AlignCenter,
+                             label)
 
         # Attributes.
         offset = 0

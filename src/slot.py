@@ -152,8 +152,9 @@ class SlotItem(QtWidgets.QGraphicsItem):
         config = view.config
         if view.drawingConnection:
             if self.parentItem() == view.currentHoveredNode:
-                painter.setBrush(QtGui.QColor(
-                    *config['non_connectable_color']))
+                painter.setBrush(
+                    QtGui.QColor(*config['non_connectable_color'])
+                )
                 if self.slotType != view.sourceSlot.slotType:
                     if not view.sourceSlot.__check_no_loop(self):
                         _penValid = QtGui.QPen()

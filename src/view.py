@@ -16,6 +16,7 @@ class NodeView(QtWidgets.QGraphicsView):
     signal_NodeMoved = QtCore.Signal(str, object)
     signal_NodeDoubleClicked = QtCore.Signal(str)
 
+    signal_RootUpdated = QtCore.Signal(object)
     signal_Connected = QtCore.Signal(object, object)
     signal_Disconnected = QtCore.Signal(object, object)
 
@@ -240,12 +241,27 @@ class NodeView(QtWidgets.QGraphicsView):
         if event.key() == QtCore.Qt.Key_F:
             self._focus()
 
+        items = self.scene().selectedItems()
+        if items and (event.key() == QtCore.Qt.Key_R):
+            for item in items:
+                if isinstance(item, NodeItem):
+                    self.setNodeAsRoot(item)
+
         # Emit signal.
         self.signal_KeyPressed.emit(event.key())
 
     def keyReleaseEvent(self, event):
         if event.key() in self.pressedKeys:
             self.pressedKeys.remove(event.key())
+
+    def setNodeAsRoot(self, node):
+        self.scene().root = node.data
+        for connection in node.slot_parent.connections:
+            connection._remove()
+        node.update()
+
+        # Emit signal
+        self.signal_RootUpdated.emit(node)
 
     def _initRubberband(self, position):
         self.rubberBandStart = position
