@@ -232,6 +232,8 @@ class NodeView(QtWidgets.QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event):
+        scene = self.scene()
+
         if event.key() not in self.pressedKeys:
             self.pressedKeys.append(event.key())
 
@@ -239,9 +241,12 @@ class NodeView(QtWidgets.QGraphicsView):
             self._deleteSelectedNodes()
 
         if event.key() == QtCore.Qt.Key_F:
+            if event.modifiers() == QtCore.Qt.ShiftModifier:
+                scene.setFormalPosition()
+                scene.clearSelection()
             self._focus()
 
-        items = self.scene().selectedItems()
+        items = scene.selectedItems()
         if items and (event.key() == QtCore.Qt.Key_R):
             for item in items:
                 if isinstance(item, NodeItem):

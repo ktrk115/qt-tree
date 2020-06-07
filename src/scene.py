@@ -38,11 +38,11 @@ class NodeScene(QtWidgets.QGraphicsScene):
             image = getattr(n_data, 'image')
             view.createNode(n_data, pil_image=image)
 
-        self.setFormalPosition()
-
         for n_data in nodes:
             if not n_data.is_root:
                 view.createConnection(n_data.parent, n_data)
+
+        self.setFormalPosition()
 
     def setFormalPosition(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -62,3 +62,12 @@ class NodeScene(QtWidgets.QGraphicsScene):
             nodeItem = self.nodes[int(obj['name'])]
             position = QtCore.QPointF(x, y)
             nodeItem.setPos(position - nodeItem.nodeCenter)
+
+            connections = nodeItem.slot_parent.connections.copy()
+            connections += nodeItem.slot_child.connections
+            for connection in connections:
+                slot = connection.childSlotItem
+                connection.source_point = slot.center()
+                slot = connection.parentSlotItem
+                connection.target_point = slot.center()
+                connection.updatePath()
