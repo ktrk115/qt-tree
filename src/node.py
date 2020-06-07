@@ -3,15 +3,13 @@ from .slot import SlotItem, ConnectionItem
 
 
 class NodeItem(QtWidgets.QGraphicsItem):
-    def __init__(self, name, preset, config, pil_image):
-        super(NodeItem, self).__init__()
+    def __init__(self, data, config, pil_image):
+        super().__init__()
 
         self.setZValue(1)
 
         # Storage
-        self.name = name
-        self.nodePreset = preset
-        self.attrPreset = None
+        self.data = data
 
         # Attributes storage.
         self.attrCount = 1
@@ -26,6 +24,10 @@ class NodeItem(QtWidgets.QGraphicsItem):
         if pil_image is not None:
             from PIL.ImageQt import ImageQt
             self.image = QtGui.QPixmap.fromImage(ImageQt(pil_image))
+
+    @property
+    def name(self):
+        return self.data.name
 
     @property
     def pen(self):
@@ -57,22 +59,22 @@ class NodeItem(QtWidgets.QGraphicsItem):
 
         self._brush = QtGui.QBrush()
         self._brush.setStyle(QtCore.Qt.SolidPattern)
-        self._brush.setColor(QtGui.QColor(*config[self.nodePreset]['bg']))
+        self._brush.setColor(QtGui.QColor(*config['node']['bg']))
 
         self._pen = QtGui.QPen()
         self._pen.setStyle(QtCore.Qt.SolidLine)
         self._pen.setWidth(self.border)
-        self._pen.setColor(QtGui.QColor(*config[self.nodePreset]['border']))
+        self._pen.setColor(QtGui.QColor(*config['node']['border']))
 
         self._penSel = QtGui.QPen()
         self._penSel.setStyle(QtCore.Qt.SolidLine)
         self._penSel.setWidth(self.border)
         self._penSel.setColor(QtGui.QColor(
-            *config[self.nodePreset]['border_sel']))
+            *config['node']['border_sel']))
 
         self._textPen = QtGui.QPen()
         self._textPen.setStyle(QtCore.Qt.SolidLine)
-        self._textPen.setColor(QtGui.QColor(*config[self.nodePreset]['text']))
+        self._textPen.setColor(QtGui.QColor(*config['node']['text']))
 
         self._nodeTextFont = QtGui.QFont(
             config['node_font'], config['node_font_size'], QtGui.QFont.Bold)
@@ -88,9 +90,7 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self._attrPen = QtGui.QPen()
         self._attrPen.setStyle(QtCore.Qt.SolidLine)
 
-    def _createAttribute(self, preset, slot_parent, slot_child):
-        self.attrPreset = preset
-
+    def _createAttribute(self, slot_parent, slot_child):
         if slot_parent:
             self.slot_parent = SlotItem(parent=self, slot_type='parent')
 
@@ -98,7 +98,7 @@ class NodeItem(QtWidgets.QGraphicsItem):
             self.slot_child = SlotItem(parent=self, slot_type='child')
 
     def _remove(self):
-        self.scene().nodes.pop(self.name)
+        self.scene().nodes.pop(id(self.data))
 
         # Remove all parent connections.
         if self.slot_parent is not None:
@@ -166,10 +166,8 @@ class NodeItem(QtWidgets.QGraphicsItem):
                             self.baseWidth - self.border,
                             self.attrHeight)
 
-        preset = 'attr_default'
-
         # Attribute base.
-        self._attrBrush.setColor(QtGui.QColor(*config[preset]['bg']))
+        self._attrBrush.setColor(QtGui.QColor(*config['attr']['bg']))
 
         self._attrPen.setColor(QtGui.QColor(0, 0, 0, 0))
         painter.setPen(self._attrPen)
@@ -180,7 +178,7 @@ class NodeItem(QtWidgets.QGraphicsItem):
         painter.drawRect(rect)
 
         # Attribute label.
-        painter.setPen(QtGui.QColor(*config[preset]['text']))
+        painter.setPen(QtGui.QColor(*config['attr']['text']))
         painter.setFont(self._attrTextFont)
 
         # Search non-connectable attributes.
@@ -215,36 +213,19 @@ class NodeItem(QtWidgets.QGraphicsItem):
 
         self.setZValue(2)
 
-        super(NodeItem, self).mousePressEvent(event)
+        super().mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event):
-        super(NodeItem, self).mouseDoubleClickEvent(event)
+        super().mouseDoubleClickEvent(event)
         self.scene().parent().signal_NodeDoubleClicked.emit(self.name)
 
     def mouseMoveEvent(self, event):
-        if self.scene().views()[0].gridVisToggle:
-            if self.scene().views()[0].gridSnapToggle or self.scene().views()[0]._nodeSnap:
-                gridSize = self.scene().gridSize
-
-                currentPos = self.mapToScene(event.pos().x() - self.baseWidth / 2,
-                                             event.pos().y() - self.height / 2)
-
-                snap_x = (round(currentPos.x() / gridSize)
-                          * gridSize) - gridSize / 4
-                snap_y = (round(currentPos.y() / gridSize)
-                          * gridSize) - gridSize / 4
-                snap_pos = QtCore.QPointF(snap_x, snap_y)
-                self.setPos(snap_pos)
-
-                self.scene().updateScene()
-            else:
-                self.scene().updateScene()
-                super(NodeItem, self).mouseMoveEvent(event)
+        self.scene().updateScene()
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        # Emit node moved signal.
         self.scene().signal_NodeMoved.emit(self.name, self.pos())
-        super(NodeItem, self).mouseReleaseEvent(event)
+        super().mouseReleaseEvent(event)
 
     def hoverLeaveEvent(self, event):
         view = self.scene().views()[0]
@@ -253,4 +234,4 @@ class NodeItem(QtWidgets.QGraphicsItem):
             if isinstance(item, ConnectionItem):
                 item.setZValue(0)
 
-        super(NodeItem, self).hoverLeaveEvent(event)
+        super().hoverLeaveEvent(event)

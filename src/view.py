@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from anytree import NodeMixin
 from Qt import QtGui, QtCore, QtWidgets
 from .scene import NodeScene
 from .node import NodeItem
@@ -15,24 +16,20 @@ class NodeView(QtWidgets.QGraphicsView):
     signal_NodeMoved = QtCore.Signal(str, object)
     signal_NodeDoubleClicked = QtCore.Signal(str)
 
-    signal_AttrCreated = QtCore.Signal(object, object)
-
     signal_Connected = QtCore.Signal(object, object)
     signal_Disconnected = QtCore.Signal(object, object)
 
     signal_KeyPressed = QtCore.Signal(object)
     signal_Dropped = QtCore.Signal()
 
-    def __init__(self, parent, configPath=defaultConfigPath):
-        super(NodeView, self).__init__(parent)
+    def __init__(self, root, parent=None,
+                 configPath=defaultConfigPath):
+        super().__init__(parent)
 
         # Load configuration.
         self.loadConfig(configPath)
 
         # General data.
-        self.gridVisToggle = True
-        self.gridSnapToggle = False
-        self._nodeSnap = False
         self.selectedNodes = None
 
         # Connections data.
@@ -43,6 +40,9 @@ class NodeView(QtWidgets.QGraphicsView):
         # Display options.
         self.currentState = 'DEFAULT'
         self.pressedKeys = list()
+
+        self.initialize(root)
+        self._focus()
 
     def wheelEvent(self, event):
         self.currentState = 'ZOOM_VIEW'
@@ -240,16 +240,10 @@ class NodeView(QtWidgets.QGraphicsView):
         if event.key() == QtCore.Qt.Key_F:
             self._focus()
 
-        if event.key() == QtCore.Qt.Key_S:
-            self._nodeSnap = True
-
         # Emit signal.
         self.signal_KeyPressed.emit(event.key())
 
     def keyReleaseEvent(self, event):
-        if event.key() == QtCore.Qt.Key_S:
-            self._nodeSnap = False
-
         if event.key() in self.pressedKeys:
             self.pressedKeys.remove(event.key())
 
@@ -357,7 +351,7 @@ class NodeView(QtWidgets.QGraphicsView):
         with filePath.open() as f:
             self.config = json.load(f)
 
-    def initialize(self):
+    def initialize(self, root=None):
         # Setup view.
         config = self.config
         self.setRenderHint(QtGui.QPainter.Antialiasing, config['antialiasing'])
@@ -381,8 +375,7 @@ class NodeView(QtWidgets.QGraphicsView):
         sceneHeight = config['scene_height']
         scene.setSceneRect(0, 0, sceneWidth, sceneHeight)
         self.setScene(scene)
-        # Connect scene node moved signal
-        scene.signal_NodeMoved.connect(self.signal_NodeMoved)
+        scene.setNodes(root)
 
         # Tablet zoom.
         self.previousMouseOffset = 0
@@ -392,39 +385,31 @@ class NodeView(QtWidgets.QGraphicsView):
         # Connect signals.
         self.scene().selectionChanged.connect(self._returnSelection)
 
-    def createNode(self, name='default', preset='node_default', position=None, pil_image=None):
-        # Check for name clashes
-        if name in self.scene().nodes.keys():
-            print(
-                'A node with the same name already exists : {0}'.format(name))
-            print('Node creation aborted !')
-            return
-        else:
-            nodeItem = NodeItem(name=name, preset=preset,
-                                config=self.config, pil_image=pil_image)
+    def createNode(self, data, position=None, pil_image=None):
+        nodeItem = NodeItem(data, config=self.config, pil_image=pil_image)
 
-            # Store node in scene.
-            self.scene().nodes[name] = nodeItem
+        # Store node in scene.
+        self.scene().nodes[id(data)] = nodeItem
 
-            if not position:
-                # Get the center of the view.
-                position = self.mapToScene(self.viewport().rect().center())
+        if not position:
+            # Get the center of the view.
+            position = self.mapToScene(self.viewport().rect().center())
 
-            # Set node position.
-            self.scene().addItem(nodeItem)
-            nodeItem.setPos(position - nodeItem.nodeCenter)
+        # Set node position.
+        self.scene().addItem(nodeItem)
+        nodeItem.setPos(position - nodeItem.nodeCenter)
 
-            # Emit signal.
-            self.signal_NodeCreated.emit(name)
+        nodeItem._createAttribute(
+            slot_parent=True,
+            slot_child=True
+        )
 
-            return nodeItem
+        # Emit signal.
+        self.signal_NodeCreated.emit(data.name)
+
+        return nodeItem
 
     def deleteNode(self, node):
-        if not node in self.scene().nodes.values():
-            print('Node object does not exist !')
-            print('Node deletion aborted !')
-            return
-
         if node in self.scene().nodes.values():
             nodeName = node.name
             node._remove()
@@ -432,29 +417,19 @@ class NodeView(QtWidgets.QGraphicsView):
             # Emit signal.
             self.signal_NodeDeleted.emit([nodeName])
 
-    def createAttribute(self, node, preset='attr_default', slot_parent=True, slot_child=True):
-        if not node in self.scene().nodes.values():
-            print('Node object does not exist !')
-            print('Attribute creation aborted !')
-            return
-
-        node._createAttribute(
-            preset=preset,
-            slot_parent=slot_parent,
-            slot_child=slot_child
-        )
-
-    def createConnection(self, sourceNode, targetNode):
-        slot_child = self.scene().nodes[sourceNode].slot_child
-        slot_parent = self.scene().nodes[targetNode].slot_parent
+    def createConnection(self, sourceData, targetData):
+        id_source = id(sourceData)
+        id_target = id(targetData)
+        slot_child = self.scene().nodes[id_source].slot_child
+        slot_parent = self.scene().nodes[id_target].slot_parent
 
         connection = ConnectionItem(
             slot_child.center(), slot_parent.center(),
             slot_child, slot_parent
         )
 
-        connection.childNode = slot_child.parentItem().name
-        connection.parentNode = slot_parent.parentItem().name
+        connection.parentNode = slot_child.parentItem()
+        connection.childNode = slot_parent.parentItem()
 
         slot_child.connect(slot_parent, connection)
         slot_parent.connect(slot_child, connection)

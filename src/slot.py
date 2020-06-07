@@ -4,7 +4,7 @@ from . import util
 
 class SlotItem(QtWidgets.QGraphicsItem):
     def __init__(self, parent, slot_type):
-        super(SlotItem, self).__init__(parent)
+        super().__init__(parent)
 
         # Status.
         self.setAcceptHoverEvents(True)
@@ -46,8 +46,26 @@ class SlotItem(QtWidgets.QGraphicsItem):
         if self.maxConnections > 0 and len(self.connected_slots) >= self.maxConnections:
             return False
 
+        # no loop
+        if self.__check_no_loop(slot_item):
+            return False
+
         # otherwize, all fine.
         return True
+
+    def __check_no_loop(self, slot_item):
+        if self.slotType == 'child':
+            parent = self.parentItem().data
+        elif self.slotType == 'parent':
+            child = self.parentItem().data
+
+        if slot_item.slotType == 'child':
+            parent = slot_item.parentItem().data
+        elif slot_item.slotType == 'parent':
+            child = slot_item.parentItem().data
+
+        return any(ancestor is child
+                   for ancestor in parent.iter_path_reverse())
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -63,7 +81,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
             view.drawingConnection = True
             view.sourceSlot = self
         else:
-            super(SlotItem, self).mousePressEvent(event)
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         from .node import NodeItem
@@ -89,7 +107,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
             self.newConnection.target_point = self.mapToScene(event.pos())
             self.newConnection.updatePath()
         else:
-            super(SlotItem, self).mouseMoveEvent(event)
+            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         view = self.scene().views()[0]
@@ -100,7 +118,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
 
             if not isinstance(target, SlotItem):
                 self.newConnection._remove()
-                super(SlotItem, self).mouseReleaseEvent(event)
+                super().mouseReleaseEvent(event)
                 return
 
             if target.accepts(self):
@@ -117,7 +135,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
             else:
                 self.newConnection._remove()
         else:
-            super(SlotItem, self).mouseReleaseEvent(event)
+            super().mouseReleaseEvent(event)
 
         view.currentHoveredNode = None
 
@@ -136,16 +154,14 @@ class SlotItem(QtWidgets.QGraphicsItem):
             if self.parentItem() == view.currentHoveredNode:
                 painter.setBrush(QtGui.QColor(
                     *config['non_connectable_color']))
-                if self.slotType == view.sourceSlot.slotType:
-                    painter.setBrush(QtGui.QColor(
-                        *config['non_connectable_color']))
-                else:
-                    _penValid = QtGui.QPen()
-                    _penValid.setStyle(QtCore.Qt.SolidLine)
-                    _penValid.setWidth(2)
-                    _penValid.setColor(QtGui.QColor(255, 255, 255, 255))
-                    painter.setPen(_penValid)
-                    painter.setBrush(self.brush)
+                if self.slotType != view.sourceSlot.slotType:
+                    if not view.sourceSlot.__check_no_loop(self):
+                        _penValid = QtGui.QPen()
+                        _penValid.setStyle(QtCore.Qt.SolidLine)
+                        _penValid.setWidth(2)
+                        _penValid.setColor(QtGui.QColor(255, 255, 255, 255))
+                        painter.setPen(_penValid)
+                        painter.setBrush(self.brush)
 
         painter.drawEllipse(self.boundingRect())
 
@@ -179,10 +195,14 @@ class SlotItem(QtWidgets.QGraphicsItem):
         # Populate connection.
         if slot_item.slotType == 'parent':
             connection.parentSlotItem = slot_item
-            connection.childNode = self.parentItem().name
+            connection.childNode = slot_item.parentItem()
+            connection.childSlotItem = self
+            connection.parentNode = self.parentItem()
         else:
             connection.childSlotItem = slot_item
-            connection.parentNode = self.parentItem().name
+            connection.parentNode = slot_item.parentItem()
+            connection.parentSlotItem = self
+            connection.childNode = self.parentItem()
 
         # Add slot to connected slots.
         if slot_item not in self.connected_slots:
@@ -192,6 +212,14 @@ class SlotItem(QtWidgets.QGraphicsItem):
         if connection not in self.connections:
             self.connections.append(connection)
 
+        # Connect data
+        child = connection.childNode
+        parent = connection.parentNode
+        if child is not None and parent is not None:
+            child = child.data
+            parent = parent.data
+            child.parent = parent
+
         # Emit signal.
         view = self.scene().views()[0]
         view.signal_Connected.emit(
@@ -199,11 +227,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
         )
 
     def disconnect(self, connection):
-        # Emit signal.
         view = self.scene().views()[0]
-        view.signal_Disconnected.emit(
-            connection.childNode, connection.parentNode
-        )
 
         # Remove slot from connected slots
         if self.slotType == 'parent':
@@ -217,10 +241,21 @@ class SlotItem(QtWidgets.QGraphicsItem):
         # Remove connections
         self.connections.remove(connection)
 
+        # Disconnect data
+        child = connection.childNode
+        parent = connection.parentNode
+        if child is not None and parent is not None:
+            child.data.parent = None
+
+        # Emit signal.
+        view.signal_Disconnected.emit(
+            connection.childNode, connection.parentNode
+        )
+
 
 class ConnectionItem(QtWidgets.QGraphicsPathItem):
     def __init__(self, source_point, target_point, source, target):
-        super(ConnectionItem, self).__init__()
+        super().__init__()
 
         self.setZValue(1)
 
@@ -313,7 +348,7 @@ class ConnectionItem(QtWidgets.QGraphicsPathItem):
         if not isinstance(slot, SlotItem):
             self._remove()
             self.updatePath()
-            super(ConnectionItem, self).mouseReleaseEvent(event)
+            super().mouseReleaseEvent(event)
             return
 
         if self.movable_point == 'target_point':
@@ -355,10 +390,10 @@ class ConnectionItem(QtWidgets.QGraphicsPathItem):
         path.moveTo(self.source_point)
         dx = (self.target_point.x() - self.source_point.x()) * 0.5
         dy = self.target_point.y() - self.source_point.y()
-        ctrl1 = QtCore.QPointF(self.source_point.x() +
-                               dx, self.source_point.y() + dy * 0)
-        ctrl2 = QtCore.QPointF(self.source_point.x() +
-                               dx, self.source_point.y() + dy * 1)
+        ctrl1 = QtCore.QPointF(self.source_point.x() + dx,
+                               self.source_point.y() + dy * 0)
+        ctrl2 = QtCore.QPointF(self.source_point.x() + dx,
+                               self.source_point.y() + dy * 1)
         path.cubicTo(ctrl1, ctrl2, self.target_point)
 
         self.setPath(path)

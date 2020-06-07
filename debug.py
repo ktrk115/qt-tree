@@ -3,17 +3,18 @@ import tempfile
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
 from Qt import QtWidgets, QtGui
+from anytree import NodeMixin
 from anytree.exporter import DotExporter
 
-from src.base_node import BaseNode
-from src.window import TreeEditWindow
+from src.view import NodeView
 
 from IPython import embed
 
 
-class MyNode(BaseNode):
+class MyNode(NodeMixin):
     def __init__(self, name, parent=None):
-        super().__init__(name, parent)
+        self.name = str(name)
+        self.parent = parent
 
     @property
     def image(self):
@@ -27,7 +28,7 @@ class MyNode(BaseNode):
         return img
 
     def _node_attr(self, out_dir):
-        out_path = out_dir + f'/{self.index}.png'
+        out_path = out_dir + f'/{self.name}.png'
         self.image.save(out_path)
 
         attrs = {
@@ -55,7 +56,7 @@ class MyNode(BaseNode):
                 return Image.open(f).copy()
 
 
-class OutputLabel(QtWidgets.QLabel):
+class MyLabel(QtWidgets.QLabel):
     def __init__(self, root):
         super().__init__()
         self.root = root
@@ -67,18 +68,31 @@ class OutputLabel(QtWidgets.QLabel):
         self.setFixedSize(*img.size)
 
 
+class MyWindow(QtWidgets.QMainWindow):
+    def __init__(self, root):
+        super().__init__()
+        self.setWindowTitle("Debug")
+
+        view = NodeView(root)
+        label = MyLabel(root)
+        view.signal_Connected.connect(label.set_image)
+        view.signal_Disconnected.connect(label.set_image)
+
+        widget = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(view)
+        layout.addWidget(label)
+        widget.setLayout(layout)
+        self.setCentralWidget(widget)
+
+
 if __name__ == "__main__":
     root = MyNode(0)
     MyNode(1, root)
     MyNode(2, root)
 
     app = QtWidgets.QApplication(sys.argv)
-
-    window = TreeEditWindow(root)
-    output = OutputLabel(root)
-    window.set_connected_func(output.set_image)
-
+    window = MyWindow(root)
     window.show()
-    output.show()
 
     sys.exit(app.exec_())
