@@ -19,16 +19,18 @@ class NodeView(QtWidgets.QGraphicsView):
     signal_RootUpdated = QtCore.Signal(object)
     signal_Connected = QtCore.Signal(object, object)
     signal_Disconnected = QtCore.Signal(object, object)
+    signal_DialogAccepted = QtCore.Signal()
 
     signal_KeyPressed = QtCore.Signal(object)
     signal_Dropped = QtCore.Signal()
 
-    def __init__(self, root, parent=None,
+    def __init__(self, root, NodeDialog=None, parent=None,
                  configPath=defaultConfigPath):
         super().__init__(parent)
 
         # Load configuration.
         self.loadConfig(configPath)
+        self.NodeDialog = NodeDialog
 
         # General data.
         self.selectedNodes = None
@@ -406,8 +408,8 @@ class NodeView(QtWidgets.QGraphicsView):
         # Connect signals.
         self.scene().selectionChanged.connect(self._returnSelection)
 
-    def createNode(self, data, position=None, pil_image=None):
-        nodeItem = NodeItem(data, config=self.config, pil_image=pil_image)
+    def createNode(self, data, position=None):
+        nodeItem = NodeItem(self, data)
 
         # Store node in scene.
         self.scene().nodes[id(data)] = nodeItem

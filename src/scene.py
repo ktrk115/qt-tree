@@ -35,8 +35,7 @@ class NodeScene(QtWidgets.QGraphicsScene):
         view = self.views()[0]
         nodes = [root] + list(root.descendants)
         for n_data in nodes:
-            image = getattr(n_data, 'image')
-            view.createNode(n_data, pil_image=image)
+            view.createNode(n_data)
 
         for n_data in nodes:
             if not n_data.is_root:

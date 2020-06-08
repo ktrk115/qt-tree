@@ -164,7 +164,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
                         painter.setPen(_penValid)
                         painter.setBrush(self.brush)
 
-        painter.drawEllipse(self.boundingRect())
+        painter.drawEllipse(self.boundingRectForPaint())
 
     def center(self):
         rect = self.boundingRect()
@@ -180,6 +180,15 @@ class SlotItem(QtWidgets.QGraphicsItem):
         self.brush.setColor(QtGui.QColor(*config['slot_color']))
 
     def boundingRect(self):
+        width = height = self.parentItem().baseWidth / 2.0
+        x = (self.parentItem().baseWidth - width) / 2.
+        y = - height / 2.0
+        if self.slotType == 'child':
+            y += self.parentItem().height
+        rect = QtCore.QRectF(QtCore.QRect(x, y, width, height))
+        return rect
+
+    def boundingRectForPaint(self):
         width = height = self.parentItem().baseWidth / 10.0
         x = (self.parentItem().baseWidth - width) / 2.
         y = - height / 2.0

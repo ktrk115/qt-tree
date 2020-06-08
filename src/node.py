@@ -3,7 +3,7 @@ from .slot import SlotItem, ConnectionItem
 
 
 class NodeItem(QtWidgets.QGraphicsItem):
-    def __init__(self, data, config, pil_image):
+    def __init__(self, view, data):
         super().__init__()
 
         self.setZValue(1)
@@ -18,12 +18,18 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self.slot_parent = None
 
         # Methods.
-        self._createStyle(config)
+        self._createStyle(view.config)
 
-        self.image = None
-        if pil_image is not None:
+        self.image = getattr(data, 'image', None)
+        if self.image is not None:
             from PIL.ImageQt import ImageQt
-            self.image = QtGui.QPixmap.fromImage(ImageQt(pil_image))
+            img_qt = ImageQt(self.image)
+            self.image = QtGui.QPixmap.fromImage(img_qt)
+
+        self.dialog = None
+        if view.NodeDialog is not None:
+            self.dialog = view.NodeDialog(data, parent=view)
+            self.dialog.accepted.connect(view.signal_DialogAccepted)
 
     @property
     def name(self):
@@ -76,10 +82,16 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self._textPen.setStyle(QtCore.Qt.SolidLine)
         self._textPen.setColor(QtGui.QColor(*config['node']['text']))
 
+        self._rootTextFont = QtGui.QFont(
+            config['font'],
+            config['root_font_size'],
+            QtGui.QFont.Bold
+        )
         self._nodeTextFont = QtGui.QFont(
-            config['node_font'], config['node_font_size'], QtGui.QFont.Bold)
-        self._attrTextFont = QtGui.QFont(
-            config['attr_font'], config['attr_font_size'], QtGui.QFont.Normal)
+            config['font'],
+            config['node_font_size'],
+            QtGui.QFont.Bold
+        )
 
         self._attrBrush = QtGui.QBrush()
         self._attrBrush.setStyle(QtCore.Qt.SolidPattern)
@@ -142,13 +154,13 @@ class NodeItem(QtWidgets.QGraphicsItem):
         if self.scene().root == self.data:
             label = 'Root'
             painter.setPen(self._textPen)
-            painter.setFont(self._nodeTextFont)
+            painter.setFont(self._rootTextFont)
 
             metrics = QtGui.QFontMetrics(painter.font())
             text_width = metrics.boundingRect(label).width() + 14
-            text_height = metrics.boundingRect(label).height() + 14
-            margin = (text_width - self.baseWidth) * 0.5
-            textRect = QtCore.QRect(-margin,
+            text_height = metrics.boundingRect(label).height() + 32
+            margin = (self.baseWidth - text_width) * 0.5
+            textRect = QtCore.QRect(margin,
                                     -text_height,
                                     text_width,
                                     text_height)
@@ -179,10 +191,6 @@ class NodeItem(QtWidgets.QGraphicsItem):
 
         painter.drawRect(rect)
 
-        # Attribute label.
-        painter.setPen(QtGui.QColor(*config['attr']['text']))
-        painter.setFont(self._attrTextFont)
-
         # Search non-connectable attributes.
         if view.drawingConnection:
             if self == view.currentHoveredNode:
@@ -197,7 +205,24 @@ class NodeItem(QtWidgets.QGraphicsItem):
                                 rect.width() - 2 * self.radius,
                                 rect.height())
 
-        if self.image is not None:
+        if self.image is None:
+            painter.setPen(self._textPen)
+            painter.setFont(self._nodeTextFont)
+
+            metrics = QtGui.QFontMetrics(painter.font())
+            rect = metrics.boundingRect(self.name)
+            text_width = rect.width() + 14
+            text_height = rect.height() + 14
+            x = (self.baseWidth - text_width) * 0.5
+            y = (self.height - text_height) * 0.5
+            textRect = QtCore.QRect(x, y,
+                                    text_width,
+                                    text_height)
+
+            painter.drawText(textRect,
+                             QtCore.Qt.AlignCenter,
+                             self.name)
+        else:
             img = self.image.scaled(self.baseWidth - self.border * 2,
                                     self.height - self.border * 2, QtCore.Qt.KeepAspectRatio)
             x = (self.baseWidth - img.width()) / 2
@@ -218,6 +243,8 @@ class NodeItem(QtWidgets.QGraphicsItem):
         super().mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event):
+        if self.dialog is not None:
+            self.dialog.exec_()
         super().mouseDoubleClickEvent(event)
         self.scene().parent().signal_NodeDoubleClicked.emit(self.name)
 

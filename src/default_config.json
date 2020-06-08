@@ -5,10 +5,9 @@
     "antialiasing_boost": true,
     "smooth_pixmap": true,
 
-    "node_font": "Arial",
-    "node_font_size": 36,
-    "attr_font": "Arial",
-    "attr_font_size": 10,
+    "font": "Arial",
+    "root_font_size": 36,
+    "node_font_size": 58,
     "mouse_bounding_box": 80,
 
     "node_width": 320,
