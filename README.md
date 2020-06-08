@@ -1,7 +1,12 @@
 # QtTree
 QtTree provides a graphical user interface for editing and visualizing tree data structure.
 
-## Basic usage
+## Installation
+```
+pip install qt-tree
+```
+
+## Usage
 Check [demo.py](https://github.com/ktrk115/qt-tree/blob/master/demo.py) to know how this library can use.
 
 ## License
