@@ -289,21 +289,11 @@ class NodeView(QtWidgets.QGraphicsView):
             self.fitInView(itemsArea, QtCore.Qt.KeepAspectRatio)
         else:
             itemsArea = self.scene().itemsBoundingRect()
-            frame_width = self.frameGeometry().width()
-            frame_height = self.frameGeometry().height()
-            if itemsArea.width() / itemsArea.height() < frame_width / frame_height:
-                x_pad = (frame_width - itemsArea.width() *
-                         frame_height / itemsArea.height()) / 2
-                y_pad = 0
-            else:
-                x_pad = 0
-                y_pad = (frame_height - itemsArea.height() *
-                         frame_width / itemsArea.width()) / 2
-            itemsArea.setX(itemsArea.x() - padding - x_pad)
-            itemsArea.setY(itemsArea.y() - padding - y_pad -
-                           self.config['node_font_size'])
-            itemsArea.setWidth(itemsArea.width() + padding + x_pad * 2)
-            itemsArea.setHeight(itemsArea.height() + padding + y_pad * 2)
+            itemsArea.setX(itemsArea.x() - padding)
+            itemsArea.setY(itemsArea.y() - padding -
+                           self.config['root_font_size'])
+            itemsArea.setWidth(itemsArea.width() + padding)
+            itemsArea.setHeight(itemsArea.height() + padding)
             self.fitInView(itemsArea, QtCore.Qt.KeepAspectRatio)
 
     def _getSelectionBoundingbox(self):
@@ -377,20 +367,31 @@ class NodeView(QtWidgets.QGraphicsView):
     def initialize(self, root=None):
         # Setup view.
         config = self.config
-        self.setRenderHint(QtGui.QPainter.Antialiasing, config['antialiasing'])
-        self.setRenderHint(QtGui.QPainter.TextAntialiasing,
-                           config['antialiasing'])
         self.setRenderHint(
-            QtGui.QPainter.HighQualityAntialiasing, config['antialiasing_boost'])
+            QtGui.QPainter.Antialiasing,
+            config['antialiasing']
+        )
         self.setRenderHint(
-            QtGui.QPainter.SmoothPixmapTransform, config['smooth_pixmap'])
+            QtGui.QPainter.TextAntialiasing,
+            config['antialiasing']
+        )
+        self.setRenderHint(
+            QtGui.QPainter.HighQualityAntialiasing,
+            config['antialiasing_boost']
+        )
+        self.setRenderHint(
+            QtGui.QPainter.SmoothPixmapTransform,
+            config['smooth_pixmap']
+        )
         self.setRenderHint(QtGui.QPainter.NonCosmeticDefaultPen, True)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.rubberband = QtWidgets.QRubberBand(
-            QtWidgets.QRubberBand.Rectangle, self)
+            QtWidgets.QRubberBand.Rectangle,
+            self
+        )
 
         # Setup scene.
         scene = NodeScene(self)
@@ -421,11 +422,7 @@ class NodeView(QtWidgets.QGraphicsView):
         # Set node position.
         self.scene().addItem(nodeItem)
         nodeItem.setPos(position - nodeItem.nodeCenter)
-
-        nodeItem._createAttribute(
-            slot_parent=True,
-            slot_child=True
-        )
+        nodeItem._createSlot()
 
         # Emit signal.
         self.signal_NodeCreated.emit(data.name)

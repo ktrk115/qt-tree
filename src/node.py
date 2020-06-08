@@ -10,10 +10,6 @@ class NodeItem(QtWidgets.QGraphicsItem):
 
         # Storage
         self.data = data
-
-        # Attributes storage.
-        self.attrCount = 1
-
         self.slot_child = None
         self.slot_parent = None
 
@@ -48,14 +44,12 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
 
         # Dimensions.
-        self.baseWidth = config['node_width']
-        self.baseHeight = config['node_height']
-        self.attrHeight = config['node_attr_height']
-        self.border = config['node_border']
-        self.radius = config['node_radius']
+        self.baseWidth = config['node']['width']
+        self.baseHeight = config['node']['height']
+        self.border = config['node']['border']
+        self.radius = config['node']['radius']
 
         self.height = (self.baseHeight +
-                       self.attrHeight * self.attrCount +
                        self.border +
                        0.5 * self.radius)
 
@@ -65,22 +59,23 @@ class NodeItem(QtWidgets.QGraphicsItem):
 
         self._brush = QtGui.QBrush()
         self._brush.setStyle(QtCore.Qt.SolidPattern)
-        self._brush.setColor(QtGui.QColor(*config['node']['bg']))
+        self._brush.setColor(QtGui.QColor(*config['node']['color']['main']))
 
         self._pen = QtGui.QPen()
         self._pen.setStyle(QtCore.Qt.SolidLine)
         self._pen.setWidth(self.border)
-        self._pen.setColor(QtGui.QColor(*config['node']['border']))
+        self._pen.setColor(QtGui.QColor(*config['node']['color']['border']))
 
         self._penSel = QtGui.QPen()
         self._penSel.setStyle(QtCore.Qt.SolidLine)
         self._penSel.setWidth(self.border)
-        self._penSel.setColor(QtGui.QColor(
-            *config['node']['border_sel']))
+        self._penSel.setColor(
+            QtGui.QColor(*config['node']['color']['border_sel'])
+        )
 
         self._textPen = QtGui.QPen()
         self._textPen.setStyle(QtCore.Qt.SolidLine)
-        self._textPen.setColor(QtGui.QColor(*config['node']['text']))
+        self._textPen.setColor(QtGui.QColor(*config['text_color']))
 
         self._rootTextFont = QtGui.QFont(
             config['font'],
@@ -93,16 +88,7 @@ class NodeItem(QtWidgets.QGraphicsItem):
             QtGui.QFont.Bold
         )
 
-        self._attrBrush = QtGui.QBrush()
-        self._attrBrush.setStyle(QtCore.Qt.SolidPattern)
-
-        self._attrBrushAlt = QtGui.QBrush()
-        self._attrBrushAlt.setStyle(QtCore.Qt.SolidPattern)
-
-        self._attrPen = QtGui.QPen()
-        self._attrPen.setStyle(QtCore.Qt.SolidLine)
-
-    def _createAttribute(self, slot_parent, slot_child):
+    def _createSlot(self, slot_parent=True, slot_child=True):
         if slot_parent:
             self.slot_parent = SlotItem(parent=self, slot_type='parent')
 
@@ -168,42 +154,6 @@ class NodeItem(QtWidgets.QGraphicsItem):
             painter.drawText(textRect,
                              QtCore.Qt.AlignCenter,
                              label)
-
-        # Attributes.
-        offset = 0
-        view = self.scene().views()[0]
-        config = view.config
-
-        # Attribute rect.
-        rect = QtCore.QRect(self.border / 2,
-                            self.baseHeight - self.radius + offset,
-                            self.baseWidth - self.border,
-                            self.attrHeight)
-
-        # Attribute base.
-        self._attrBrush.setColor(QtGui.QColor(*config['attr']['bg']))
-
-        self._attrPen.setColor(QtGui.QColor(0, 0, 0, 0))
-        painter.setPen(self._attrPen)
-        painter.setBrush(self._attrBrush)
-        if (offset / self.attrHeight) % 2:
-            painter.setBrush(self._attrBrushAlt)
-
-        painter.drawRect(rect)
-
-        # Search non-connectable attributes.
-        if view.drawingConnection:
-            if self == view.currentHoveredNode:
-                if view.sourceSlot.slotType == 'child' and self.slot_parent is None or \
-                        view.sourceSlot.slotType == 'parent' and self.slot_child is None:
-                    # Set non-connectable attributes color.
-                    painter.setPen(QtGui.QColor(
-                        *config['non_connectable_color']))
-
-        textRect = QtCore.QRect(rect.left() + self.radius,
-                                rect.top(),
-                                rect.width() - 2 * self.radius,
-                                rect.height())
 
         if self.image is None:
             painter.setPen(self._textPen)

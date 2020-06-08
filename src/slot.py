@@ -153,7 +153,8 @@ class SlotItem(QtWidgets.QGraphicsItem):
         if view.drawingConnection:
             if self.parentItem() == view.currentHoveredNode:
                 painter.setBrush(
-                    QtGui.QColor(*config['non_connectable_color'])
+                    QtGui.QColor(*config['connection']
+                                 ['color']['non_connectable'])
                 )
                 if self.slotType != view.sourceSlot.slotType:
                     if not view.sourceSlot.__check_no_loop(self):
@@ -177,7 +178,7 @@ class SlotItem(QtWidgets.QGraphicsItem):
         config = parent.scene().views()[0].config
         self.brush = QtGui.QBrush()
         self.brush.setStyle(QtCore.Qt.SolidPattern)
-        self.brush.setColor(QtGui.QColor(*config['slot_color']))
+        self.brush.setColor(QtGui.QColor(*config['slot']['color']['main']))
 
     def boundingRect(self):
         width = height = self.parentItem().baseWidth / 2.0
@@ -198,6 +199,9 @@ class SlotItem(QtWidgets.QGraphicsItem):
         return rect
 
     def connect(self, slot_item, connection):
+        scene = self.scene()
+        view = scene.views()[0]
+
         if self.maxConnections > 0 and len(self.connected_slots) >= self.maxConnections:
             # Already connected.
             self.connections[self.maxConnections - 1]._remove()
@@ -229,9 +233,11 @@ class SlotItem(QtWidgets.QGraphicsItem):
             child = child.data
             parent = parent.data
             child.parent = parent
+            if scene.root != parent.root:
+                scene.root = parent.root
+                view.signal_RootUpdated.emit(parent.root)
 
         # Emit signal.
-        view = self.scene().views()[0]
         view.signal_Connected.emit(
             connection.childNode, connection.parentNode
         )
@@ -293,8 +299,10 @@ class ConnectionItem(QtWidgets.QGraphicsPathItem):
         self.setAcceptHoverEvents(True)
         self.setZValue(-1)
 
-        self._pen = QtGui.QPen(QtGui.QColor(*config['connection_color']))
-        self._pen.setWidth(config['connection_width'])
+        self._pen = QtGui.QPen(
+            QtGui.QColor(*config['connection']['color']['main'])
+        )
+        self._pen.setWidth(config['connection']['width'])
 
     def mousePressEvent(self, event):
         view = self.scene().views()[0]
