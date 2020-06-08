@@ -1,4 +1,4 @@
-from Qt import QtCore
+from PySide2 import QtCore
 
 
 def _createPointerBoundingBox(pointerPos, bbSize):

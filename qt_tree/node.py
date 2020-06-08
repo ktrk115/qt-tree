@@ -1,4 +1,4 @@
-from Qt import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore, QtGui, QtWidgets
 from .slot import SlotItem, ConnectionItem
 
 
@@ -23,8 +23,8 @@ class NodeItem(QtWidgets.QGraphicsItem):
             self.image = QtGui.QPixmap.fromImage(img_qt)
 
         self.dialog = None
-        if view.NodeDialog is not None:
-            self.dialog = view.NodeDialog(data, parent=view)
+        if view.CustomDialog is not None:
+            self.dialog = view.CustomDialog(data, parent=view)
             self.dialog.accepted.connect(view.signal_DialogAccepted)
 
     @property

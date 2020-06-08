@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from anytree import NodeMixin
-from Qt import QtGui, QtCore, QtWidgets
+from PySide2 import QtGui, QtCore, QtWidgets
 from .scene import NodeScene
 from .node import NodeItem
 from .slot import ConnectionItem
@@ -24,13 +24,13 @@ class NodeView(QtWidgets.QGraphicsView):
     signal_KeyPressed = QtCore.Signal(object)
     signal_Dropped = QtCore.Signal()
 
-    def __init__(self, root, NodeDialog=None, parent=None,
+    def __init__(self, root, CustomDialog=None, parent=None,
                  configPath=defaultConfigPath):
         super().__init__(parent)
 
         # Load configuration.
         self.loadConfig(configPath)
-        self.NodeDialog = NodeDialog
+        self.CustomDialog = CustomDialog
 
         # General data.
         self.selectedNodes = None

@@ -1,7 +1,7 @@
 import json
 import tempfile
 import subprocess
-from Qt import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore, QtGui, QtWidgets
 from anytree import NodeMixin
 from anytree.exporter import DotExporter
 from .slot import ConnectionItem

@@ -2,13 +2,11 @@ import sys
 import tempfile
 from PIL import Image
 from PIL.ImageQt import ImageQt
-from Qt import QtWidgets, QtGui
+from PySide2 import QtWidgets, QtGui
 from anytree import NodeMixin
 from anytree.exporter import UniqueDotExporter
 
-from src.view import NodeView
-
-from IPython import embed
+from qt_tree import NodeView
 
 
 class MyNode(NodeMixin):
@@ -101,7 +99,7 @@ class MyLabel(QtWidgets.QLabel):
 class MyWindow(QtWidgets.QMainWindow):
     def __init__(self, root):
         super().__init__()
-        self.setWindowTitle("Debug")
+        self.setWindowTitle("Demo")
 
         view = NodeView(root, MyDialog)
         label = MyLabel(view.scene())
